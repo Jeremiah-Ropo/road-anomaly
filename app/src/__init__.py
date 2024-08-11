@@ -1,18 +1,23 @@
-from flask import Flask # type: ignore
-from flask_pymongo import PyMongo # type: ignore
+from flask import Flask
 from .config import Config
-
-mongo = PyMongo()
+from .mongo import init_mongo, mongo  # Ensure you import `mongo` here
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    mongo.init_app(app)
+    init_mongo(app)  # Initialize Mongo with the app
 
     with app.app_context():
-        # Import routes and models
-        from .. import routes, models, errors
+        from .routes import main as main_blueprint
+        app.register_blueprint(main_blueprint)
+
+        from .models import init_db
+        init_db()  # Initialize the DB
+
+        from .errors import register_error_handlers
+        register_error_handlers(app)
 
     return app
+
 
