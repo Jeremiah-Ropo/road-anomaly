@@ -1,18 +1,19 @@
 from .mongo import mongo
 
 def init_db():
-    # Drop the existing email index if needed
-    mongo.db.users.drop_index('email_1')
-    # Create indexes
-    mongo.db.users.create_index('email', unique=True)
+    if 'users' not in mongo.db.list_collection_names():
+        mongo.db.create_collection('users')
 
-    
-    mongo.db.books.create_index('title', unique=True)
+    if 'roads' not in mongo.db.list_collection_names():
+        mongo.db.create_collection('roads')
 
 # Example functions to interact with the books and users collections
 
 def create_user(user_data):
     return mongo.db.users.insert_one(user_data)
+
+def create_book(book_data):
+    return mongo.db.books.insert_one(book_data)
 
 def create_book(book_data):
     return mongo.db.books.insert_one(book_data)
