@@ -169,7 +169,7 @@ def get_road_anomaly(id):
     
 ##########################################################################################################
 ###########################################(PREDICT ROAD ANOMALY)#########################################
-@main.route('/api/predict', methods=['POST'])
+@main.route('/api/roads/predict', methods=['POST'])
 def predict_road_anomaly():
     try:
         data = request.get_json()
