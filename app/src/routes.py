@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from app.src import mongo
+import random
 from app.src.models import create_user
 
 main = Blueprint('main', __name__)
@@ -193,7 +194,7 @@ def predict_road_anomaly():
                 return jsonify({'error': f'{field} must be a valid number'}), 400
 
         # Dummy prediction
-        data['Anomaly'] = 1
+        data['Anomaly'] = random.randint(0, 1)
 
         return jsonify({ "status": "success", 'data': data}), 200
 
