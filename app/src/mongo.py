@@ -4,3 +4,4 @@ mongo = PyMongo()
 
 def init_mongo(app):
     mongo.init_app(app)
+    print("MongoDB initialized")

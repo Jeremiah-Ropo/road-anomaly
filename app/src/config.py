@@ -1,8 +1,17 @@
+from dotenv import load_dotenv
 import os
 
+# Load the .env file
+load_dotenv()
+
+# Access environment variables
+secret_key = os.getenv("SECRET_KEY")
+database_url = os.getenv("MONGO_URI")
+debug_mode = os.getenv("DEBUG")
+
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', '$Jeremiah59@')
-    MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://Jeremiah_Ropo:$Jeremiah59@cluster0.uuj49.mongodb.net/road-anomalies?retryWrites=true&w=majority')
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    MONGO_URI = os.getenv('MONGO_URI')
 
 # class DevelopmentConfig(Config):
 #     MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/devdatabase')
