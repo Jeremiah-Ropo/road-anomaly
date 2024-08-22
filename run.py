@@ -7,7 +7,6 @@ load_dotenv()
 # Access environment variables
 debug_mode = os.getenv("DEBUG")
 
-
 app = create_app()
 CORS(app)
 

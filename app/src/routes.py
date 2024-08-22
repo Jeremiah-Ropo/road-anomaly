@@ -36,22 +36,15 @@ def register_data():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-        if 'username' not in data:
-            return jsonify({'error': 'Username is required'}), 400
         if 'email' not in data:
             return jsonify({'error': 'Email is required'}), 400
         if 'password' not in data:
             return jsonify({'error': 'Password is required'}), 400
         # Check if username exists
-        existing_user = list(mongo.db.users.find({
-        "$or": [
-            {'username': data['username']},
-            {'email': data['email']}
-        ]
-        }))
+        existing_user = mongo.db.users.find_one({'email': data['email']})
 
-        if len(existing_user) > 0:
-            return jsonify({'error': 'Email or Username already registered'}), 400
+        if existing_user:
+            return jsonify({'error': 'Email already registered'}), 400
 
         create_user(data)
         return jsonify({ "status": "success", 'data': serialize_document(data)}), 201
@@ -181,7 +174,7 @@ def predict_road_anomaly():
         required_fields = ['Vibration', 'Latitude', 'Longitude', 
                            'Accel_X', 'Accel_Y', 'Accel_Z', 
                            'Gyro_X', 'Gyro_Y', 'Gyro_Z', 
-                           'Temperature']
+                           ]
 
         # Check if all required fields are present and convert them to float
         for field in required_fields:
