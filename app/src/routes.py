@@ -1,10 +1,11 @@
+import pickle
+import pandas as pd
+import os
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from app.src import mongo
 from app.src.models import create_user
-import os
-import pickle
-import pandas as pd
+
 
 main = Blueprint('main', __name__)
 
