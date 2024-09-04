@@ -1,8 +1,10 @@
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from app.src import mongo
-import random
 from app.src.models import create_user
+import os
+import pickle
+import pandas as pd
 
 main = Blueprint('main', __name__)
 
@@ -163,33 +165,41 @@ def get_road_anomaly(id):
     
 ##########################################################################################################
 ###########################################(PREDICT ROAD ANOMALY)#########################################
+
 @main.route('/api/roads/predict', methods=['POST'])
 def predict_road_anomaly():
+    model_path = os.path.join(os.path.dirname(__file__), 'finalnorm_model.pkl')
+    with open(model_path, 'rb') as model_file:
+        model = pickle.load(model_file)
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
         # List of required fields
-        required_fields = ['Vibration', 'Latitude', 'Longitude', 
+        required_fields = ['Latitude', 'Longitude', 
                            'Accel_X', 'Accel_Y', 'Accel_Z', 
-                           'Gyro_X', 'Gyro_Y', 'Gyro_Z', 
-                           ]
+                           'Gyro_X', 'Gyro_Y', 'Gyro_Z', 'Vibration_Binary']
 
-        # Check if all required fields are present and convert them to float
+        # Check if all required fields are present
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'{field} is required'}), 400
-            
-            try:
-                data[field] = float(data[field])
-            except ValueError:
-                return jsonify({'error': f'{field} must be a valid number'}), 400
 
-        # Dummy prediction
-        data['Anomaly'] = random.randint(0, 1)
+        # Convert data to a DataFrame
+        input_data = pd.DataFrame([data])
+        # Ensure all required fields are converted to float
+        try:
+            input_data = input_data[required_fields].astype(float)
+        except ValueError as e:
+            return jsonify({'error': 'All fields must be valid numbers'}), 400
+        # Make a prediction using the loaded model
+        anomaly_prediction = model.predict(input_data)[0]
 
-        return jsonify({ "status": "success", 'data': data}), 200
+        # Add the prediction to the data dictionary
+        data['Anomaly'] = int(anomaly_prediction)
+
+        return jsonify({"status": "success", 'data': data}), 200
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
