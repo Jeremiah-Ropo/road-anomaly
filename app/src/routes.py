@@ -177,6 +177,9 @@ def predict_road_anomaly():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
+        if 'Vibration' in data:
+            data['Vibration_Binary'] = data.pop('Vibration')
+        
         # List of required fields
         required_fields = ['Latitude', 'Longitude', 
                            'Accel_X', 'Accel_Y', 'Accel_Z', 
