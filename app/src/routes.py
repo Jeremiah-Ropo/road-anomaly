@@ -1,5 +1,6 @@
 import pickle
 import pandas as pd
+import random
 import os
 from flask import Blueprint, jsonify, request
 from bson import ObjectId
@@ -131,7 +132,7 @@ def create_road_anomaly():
                 return jsonify({'error': f'{field} must be a valid number'}), 400
 
         # Insert the validated and converted data into the database
-        mongo.db.roads.insert_one(data)
+        mongo.db.sensor_data.insert_one(data)
         return jsonify({"status": "success", 'data': serialize_document(data)}), 201
 
     except ValueError as e:
@@ -145,7 +146,7 @@ def create_road_anomaly():
 #############################################(GET ALL ROAD ANOMALIES)#####################################
 @main.route('/api/roads', methods=['GET'])
 def get_all_roads():
-    roads = list(mongo.db.roads.find({}))
+    roads = list(mongo.db.sensor_data.find({}))
     if not roads:
         return jsonify({'error': 'No road anomalies found'}), 404
     serialized_roads = [serialize_document(road) for road in roads]
@@ -156,7 +157,7 @@ def get_all_roads():
 @main.route('/api/roads/<id>', methods=['GET'])
 def get_road_anomaly(id):
     try:
-        road = mongo.db.roads.find_one({'_id': ObjectId(id)})
+        road = mongo.db.sensor_data.find_one({'_id': ObjectId(id)})
         if road:
             return jsonify({ "status": "success", "data": serialize_document(road)}), 200
         else:
@@ -169,7 +170,7 @@ def get_road_anomaly(id):
 
 @main.route('/api/roads/predict', methods=['POST'])
 def predict_road_anomaly():
-    model_path = os.path.join(os.path.dirname(__file__), 'finalnorm_model.pkl')
+    model_path = os.path.join(os.path.dirname(__file__), 'final_norm_model.pkl')
     with open(model_path, 'rb') as model_file:
         model = pickle.load(model_file)
     try:
@@ -177,13 +178,13 @@ def predict_road_anomaly():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
-        if 'Vibration' in data:
-            data['Vibration_Binary'] = data.pop('Vibration')
+        data["Temperature"] = round(32.00 + (33.00 - 32.00) * random.random(), 2)
         
         # List of required fields
-        required_fields = ['Latitude', 'Longitude', 
-                           'Accel_X', 'Accel_Y', 'Accel_Z', 
-                           'Gyro_X', 'Gyro_Y', 'Gyro_Z', 'Vibration_Binary']
+        required_fields = ['Accel_X', 'Accel_Y', 'Accel_Z',
+                           'Gyro_X', 'Gyro_Y', 'Gyro_Z', 
+                           'Latitude', 'Longitude', 'Speed', 
+                         'Vibration', 'Temperature']
 
         # Check if all required fields are present
         for field in required_fields:
@@ -202,6 +203,12 @@ def predict_road_anomaly():
 
         # Add the prediction to the data dictionary
         data['Anomaly'] = int(anomaly_prediction)
+        document = {
+            "Latitude": data['Latitude'],
+            "Longitude": data['Longitude'],
+            "Anomaly": data['Anomaly'],
+        }
+        mongo.db.result.insert_one(document)
 
         return jsonify({"status": "success", 'data': data}), 200
 
@@ -212,6 +219,46 @@ def predict_road_anomaly():
         print(f"Unexpected error: {e}")
         return jsonify({'error': 'Internal Server Error', 'message': f'{e}'}), 500
 
+##########################################################################################################
+###########################################(PREDICTED ROAD ANOMALY QUERY)#########################################
+@main.route('/api/roads', methods=['GET'])
+def get_all_results():
+    try:
+        # Parse query parameters (if provided)
+        latitude = request.args.get('latitude')
+        longitude = request.args.get('longitude')
+        anomaly = request.args.get('anomaly')
 
+        # Build query filter based on query parameters
+        query = {}
+        if latitude:
+            query['Latitude'] = float(latitude)
+        if longitude:
+            query['Longitude'] = float(longitude)
+        if anomaly:
+            query['Anomaly'] = int(anomaly)
+
+        # Fetch from the database based on query
+        road_locations = list(mongo.db.result.find(query))
+        
+        # Check if results exist
+        if not road_locations:
+            return jsonify({'error': 'No road anomalies found matching the criteria'}), 404
+
+        # Serialize road locations
+        serialized_roads = [serialize_document(road) for road in road_locations]
+        
+        # Check if there's an anomaly and provide appropriate message
+        for road in serialized_roads:
+            if road['Anomaly'] == 1:
+                road['message'] = "There is a nearby pothole"
+            elif road['Anomaly'] == 2:
+                road['message'] = "There is a nearby speed bump"
+            elif road['Anomaly'] == 3:
+                road['message'] = "There is a nearby rough road"
+
+        return jsonify({"status": "success", "data": serialized_roads}), 200
     
-    
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+

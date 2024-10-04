@@ -4,9 +4,12 @@ def init_db():
     if 'users' not in mongo.db.list_collection_names():
         mongo.db.create_collection('users')
 
-    if 'roads' not in mongo.db.list_collection_names():
-        mongo.db.create_collection('roads')
-
+    if 'sensor_data' not in mongo.db.list_collection_names():
+        mongo.db.create_collection('sensor_data')
+    
+    if 'result' not in mongo.db.list_collection_names():
+        mongo.db.create_collection('result')
+    
 # Example functions to interact with the books and users collections
 
 def create_user(user_data):

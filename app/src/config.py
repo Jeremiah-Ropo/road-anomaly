@@ -11,7 +11,7 @@ debug_mode = os.getenv("DEBUG")
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
-    MONGO_URI = os.getenv('MONGO_URI')
+    MONGO_URI = os.getenv('MONGO_URI', database_url)
 
 # class DevelopmentConfig(Config):
 #     MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/devdatabase')
