@@ -178,7 +178,10 @@ def predict_road_anomaly():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
-        data["Temperature"] = round(32.00 + (33.00 - 32.00) * random.random(), 2)
+        if 'Temperature' not in data:
+            data["Temperature"] = round(32.00 + (33.00 - 32.00) * random.random(), 2)
+        if 'Speed' not in data:
+            data["Speed"] = round(0.00 + (10.88 - 0.00) * random.random(), 2)
         
         # List of required fields
         required_fields = ['Accel_X', 'Accel_Y', 'Accel_Z',
@@ -221,7 +224,7 @@ def predict_road_anomaly():
 
 ##########################################################################################################
 ###########################################(PREDICTED ROAD ANOMALY QUERY)#########################################
-@main.route('/api/roads', methods=['GET'])
+@main.route('/api/roads/result', methods=['GET'])
 def get_all_results():
     try:
         # Parse query parameters (if provided)
@@ -256,6 +259,8 @@ def get_all_results():
                 road['message'] = "There is a nearby speed bump"
             elif road['Anomaly'] == 3:
                 road['message'] = "There is a nearby rough road"
+            elif road['Anomaly'] == 0:
+                road['message'] = "There is no anomaly in the road"
 
         return jsonify({"status": "success", "data": serialized_roads}), 200
     
