@@ -207,8 +207,8 @@ def predict_road_anomaly():
         # Add the prediction to the data dictionary
         data['Anomaly'] = int(anomaly_prediction)
         document = {
-            "Latitude": data['Latitude'],
-            "Longitude": data['Longitude'],
+            "Latitude": float(data['Latitude']),
+            "Longitude": float(data['Longitude']),
             "Anomaly": data['Anomaly'],
         }
         mongo.db.result.insert_one(document)
@@ -230,6 +230,7 @@ def get_all_results():
         # Parse query parameters (if provided)
         latitude = request.args.get('latitude')
         longitude = request.args.get('longitude')
+        print(latitude, longitude)
         anomaly = request.args.get('anomaly')
 
         # Build query filter based on query parameters
@@ -240,6 +241,7 @@ def get_all_results():
             query['Longitude'] = float(longitude)
         if anomaly:
             query['Anomaly'] = int(anomaly)
+        print(query)
 
         # Fetch from the database based on query
         road_locations = list(mongo.db.result.find(query))
