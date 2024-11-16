@@ -1,9 +1,9 @@
 from dotenv import load_dotenv
 import os
-import threading
+# import threading
 from flask_cors import CORS
 from app.src import create_app
-from app.src import batch_prediction  # Import the batch_prediction module
+# from app.src import batch_prediction  # Import the batch_prediction module
 
 # Load environment variables
 load_dotenv()
