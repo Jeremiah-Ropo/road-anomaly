@@ -228,7 +228,7 @@ def predict_road_anomaly():
 @main.route('/api/roads/result', methods=['GET'])
 def get_all_results():
     try:
-        # Parse query parameters (if provided)
+
         latitude = request.args.get('latitude', type=float)
         longitude = request.args.get('longitude', type=float)
         anomaly = request.args.get('anomaly', type=int)
@@ -236,8 +236,6 @@ def get_all_results():
         if (latitude == 0.0000 and longitude == 0.0000):
             return jsonify({'error': 'Invalid location'}), 404
 
- 
-        # Validate latitude and longitude
         if latitude is not None and longitude is not None:
             lat_min, lat_max = latitude - 0.0005, latitude + 0.0005
             lon_min, lon_max = longitude - 0.0005, longitude + 0.0005
@@ -248,26 +246,23 @@ def get_all_results():
         else:
             query = {}
 
-        # Add anomaly type to query if specified
         if anomaly is not None:
             query['Anomaly'] = anomaly
 
-        # Fetch matching documents from MongoDB
         road_locations = list(mongo.db.result.find(query))
 
         # Check if results exist
         if not road_locations:
             return jsonify({'error': 'No road anomalies found matching the criteria'}), 404
-
+        
         # Serialize road locations with calculated distances
         serialized_roads = []
-        
         for road in road_locations:
             road_data = serialize_document(road)
             road_coords = (road_data['Latitude'], road_data['Longitude'])
             queried_coords = (latitude, longitude)
             road_data['distance_m'] = geodesic(queried_coords, road_coords).meters
-
+            
             # Add message based on anomaly type
             if road_data['Anomaly'] == 1:
                 road_data['message'] = "There is a nearby pothole"
@@ -276,14 +271,9 @@ def get_all_results():
             elif road_data['Anomaly'] == 3:
                 road_data['message'] = "There is a nearby rough road"
             elif road_data['Anomaly'] == 0:
-                # road_data['message'] = "There is no anomaly in the road"
-                return jsonify({
-                    'Latitude': road_data['Latitude'],
-                    'Longitude': road_data['Longitude'],
-                    'Anomaly': road_data['Anomaly'],
-                    'Distance': road_data['distance_m'],
-                    'Message': "There is no anomaly in the road"
-                }), 404
+                road_data['message'] = "There is no anomaly in the road"
+                serialized_roads.append(road_data)
+                return jsonify({"status": "not found", "data": serialized_roads}), 200
 
             serialized_roads.append(road_data) 
         return jsonify({"status": "success", "data": serialized_roads}), 200
