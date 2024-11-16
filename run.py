@@ -13,13 +13,11 @@ debug_mode = os.getenv("DEBUG")
 app = create_app()
 CORS(app)
 
-def start_batch_prediction():
-    # Start the batch prediction job in the background
-    batch_prediction.main()
+# def start_batch_prediction():
+#     batch_prediction.main()
 
 if __name__ == '__main__':
-    # Start the batch prediction in a separate thread
-    threading.Thread(target=start_batch_prediction, daemon=True).start()
+    # threading.Thread(target=start_batch_prediction, daemon=True).start()
     
     # Run the Flask app
     app.run(debug=debug_mode)
