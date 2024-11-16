@@ -232,6 +232,10 @@ def get_all_results():
         latitude = request.args.get('latitude', type=float)
         longitude = request.args.get('longitude', type=float)
         anomaly = request.args.get('anomaly', type=int)
+
+        if (latitude == 0.0000 and longitude == 0.0000):
+            return jsonify({'error': 'Invalid location'}), 404
+
  
         # Validate latitude and longitude
         if latitude is not None and longitude is not None:
@@ -263,6 +267,9 @@ def get_all_results():
             queried_coords = (latitude, longitude)
             road_data['distance_m'] = geodesic(queried_coords, road_coords).meters
             
+            if road_data['Anomaly'] == 0:
+                return jsonify({'error': 'No anomaly detected'}), 404
+
 
             # Add message based on anomaly type
             if road_data['Anomaly'] == 1:
