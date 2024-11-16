@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from app.src import mongo
 from app.src.models import create_user
+from geopy.distance import geodesic
 
 
 main = Blueprint('main', __name__)
@@ -228,44 +229,98 @@ def predict_road_anomaly():
 def get_all_results():
     try:
         # Parse query parameters (if provided)
-        latitude = request.args.get('latitude')
-        longitude = request.args.get('longitude')
-        print(latitude, longitude)
-        anomaly = request.args.get('anomaly')
+        latitude = request.args.get('latitude', type=float)
+        longitude = request.args.get('longitude', type=float)
+        anomaly = request.args.get('anomaly', type=int)
+ 
+        # Validate latitude and longitude
+        if latitude is not None and longitude is not None:
+            lat_min, lat_max = latitude - 0.0005, latitude + 0.0005
+            lon_min, lon_max = longitude - 0.0005, longitude + 0.0005
+            query = {
+                'Latitude': {'$gte': lat_min, '$lte': lat_max},
+                'Longitude': {'$gte': lon_min, '$lte': lon_max}
+            }
+        else:
+            query = {}
 
-        # Build query filter based on query parameters
-        query = {}
-        if latitude:
-            query['Latitude'] = float(latitude)
-        if longitude:
-            query['Longitude'] = float(longitude)
-        if anomaly:
-            query['Anomaly'] = int(anomaly)
-        print(query)
+        # Add anomaly type to query if specified
+        if anomaly is not None:
+            query['Anomaly'] = anomaly
 
-        # Fetch from the database based on query
+        # Fetch matching documents from MongoDB
         road_locations = list(mongo.db.result.find(query))
-        
+
         # Check if results exist
         if not road_locations:
             return jsonify({'error': 'No road anomalies found matching the criteria'}), 404
 
-        # Serialize road locations
-        serialized_roads = [serialize_document(road) for road in road_locations]
-        
-        # Check if there's an anomaly and provide appropriate message
-        for road in serialized_roads:
-            if road['Anomaly'] == 1:
-                road['message'] = "There is a nearby pothole"
-            elif road['Anomaly'] == 2:
-                road['message'] = "There is a nearby speed bump"
-            elif road['Anomaly'] == 3:
-                road['message'] = "There is a nearby rough road"
-            elif road['Anomaly'] == 0:
-                road['message'] = "There is no anomaly in the road"
+        # Serialize road locations with calculated distances
+        serialized_roads = []
+        for road in road_locations:
+            road_data = serialize_document(road)
+            road_coords = (road_data['Latitude'], road_data['Longitude'])
+            queried_coords = (latitude, longitude)
+            road_data['distance_m'] = geodesic(queried_coords, road_coords).meters
+            
+
+            # Add message based on anomaly type
+            if road_data['Anomaly'] == 1:
+                road_data['message'] = "There is a nearby pothole"
+            elif road_data['Anomaly'] == 2:
+                road_data['message'] = "There is a nearby speed bump"
+            elif road_data['Anomaly'] == 3:
+                road_data['message'] = "There is a nearby rough road"
+            elif road_data['Anomaly'] == 0:
+                road_data['message'] = "There is no anomaly in the road"
+
+            serialized_roads.append(road_data)
 
         return jsonify({"status": "success", "data": serialized_roads}), 200
-    
+
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+# def get_all_results():
+#     try:
+#         # Parse query parameters (if provided)
+#         latitude = request.args.get('latitude')
+#         longitude = request.args.get('longitude')
+#         print(latitude, longitude)
+#         anomaly = request.args.get('anomaly')
+
+#         # Build query filter based on query parameters
+#         query = {}
+#         if latitude:
+#             query['Latitude'] = float(latitude)
+#         if longitude:
+#             query['Longitude'] = float(longitude)
+#         if anomaly:
+#             query['Anomaly'] = int(anomaly)
+#         print(query)
+
+#         # Fetch from the database based on query
+#         road_locations = list(mongo.db.result.find(query))
+        
+#         # Check if results exist
+#         if not road_locations:
+#             return jsonify({'error': 'No road anomalies found matching the criteria'}), 404
+
+#         # Serialize road locations
+#         serialized_roads = [serialize_document(road) for road in road_locations]
+        
+#         # Check if there's an anomaly and provide appropriate message
+#         for road in serialized_roads:
+#             if road['Anomaly'] == 1:
+#                 road['message'] = "There is a nearby pothole"
+#             elif road['Anomaly'] == 2:
+#                 road['message'] = "There is a nearby speed bump"
+#             elif road['Anomaly'] == 3:
+#                 road['message'] = "There is a nearby rough road"
+#             elif road['Anomaly'] == 0:
+#                 road['message'] = "There is no anomaly in the road"
+
+#         return jsonify({"status": "success", "data": serialized_roads}), 200
+    
+#     except Exception as e:
+#         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
 
