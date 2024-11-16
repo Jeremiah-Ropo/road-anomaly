@@ -261,6 +261,7 @@ def get_all_results():
 
         # Serialize road locations with calculated distances
         serialized_roads = []
+        
         for road in road_locations:
             road_data = serialize_document(road)
             road_coords = (road_data['Latitude'], road_data['Longitude'])
@@ -275,12 +276,16 @@ def get_all_results():
             elif road_data['Anomaly'] == 3:
                 road_data['message'] = "There is a nearby rough road"
             elif road_data['Anomaly'] == 0:
-                road_data['message'] = "There is no anomaly in the road"
-                serialized_roads.append(road_data)
-                return jsonify({"status": "success", "data": serialized_roads}), 404 
+                # road_data['message'] = "There is no anomaly in the road"
+                return jsonify({
+                    'Latitude': road_data['Latitude'],
+                    'Longitude': road_data['Longitude'],
+                    'Anomaly': road_data['Anomaly'],
+                    'Distance': road_data['distance_m'],
+                    'Message': "There is no anomaly in the road"
+                }), 404
 
-            serialized_roads.append(road_data)
-
+            serialized_roads.append(road_data) 
         return jsonify({"status": "success", "data": serialized_roads}), 200
 
     except Exception as e:
