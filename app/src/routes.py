@@ -266,10 +266,6 @@ def get_all_results():
             road_coords = (road_data['Latitude'], road_data['Longitude'])
             queried_coords = (latitude, longitude)
             road_data['distance_m'] = geodesic(queried_coords, road_coords).meters
-            
-            if road_data['Anomaly'] == 0:
-                return jsonify({'error': 'No anomaly detected'}), 404
-
 
             # Add message based on anomaly type
             if road_data['Anomaly'] == 1:
@@ -280,6 +276,8 @@ def get_all_results():
                 road_data['message'] = "There is a nearby rough road"
             elif road_data['Anomaly'] == 0:
                 road_data['message'] = "There is no anomaly in the road"
+                serialized_roads.append(road_data)
+                return jsonify({"status": "success", "data": serialized_roads}), 404 
 
             serialized_roads.append(road_data)
 
