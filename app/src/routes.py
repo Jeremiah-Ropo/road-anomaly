@@ -7,6 +7,7 @@ from bson import ObjectId
 from app.src import mongo
 from app.src.models import create_user
 from geopy.distance import geodesic
+from datetime import datetime
 
 
 main = Blueprint('main', __name__)
@@ -272,8 +273,16 @@ def get_all_results():
                 road_data['message'] = "There is a nearby rough road"
             elif road_data['Anomaly'] == 0:
                 road_data['message'] = "There is no anomaly in the road"
-                serialized_roads.append(road_data)
-                return jsonify({"status": "not found", "data": serialized_roads}), 200
+                return jsonify({
+                    'status': 'error',
+                    'data': [{
+                        'Latitude': road_data['Latitude'],
+                        'Longitude': road_data['Longitude'],
+                        'Anomaly': road_data['Anomaly'],
+                        'Distance': road_data['distance_m'],
+                        'Message': "There is no anomaly in the road"
+                    }]
+                }), 404
 
             serialized_roads.append(road_data) 
         return jsonify({"status": "success", "data": serialized_roads}), 200
@@ -323,4 +332,64 @@ def get_all_results():
     
 #     except Exception as e:
 #         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+##########################################################################################################
+###########################################(PREDICTED ROAD ANOMALY QUERY)#########################################
+@main.route('/api/distance-time/graph', methods=['GET'])
+def get_distance_time_data():
+    try:
+        # Fetch data from the database
+        anomaly_data = list(mongo.db.sensor_data.find({}))
 
+        if not anomaly_data:
+            return jsonify({'error': 'No data found'}), 404
+
+        # Initialize distance and time arrays
+        distance_time_data = []
+        total_distance = 0.0  # Accumulator for cumulative distance
+        ref_point = None  # Initialize reference point
+
+        # Process each entry
+        for entry in anomaly_data:
+            # Check if latitude and longitude are zero; skip if they are
+            latitude = entry.get("Latitude")
+            longitude = entry.get("Longitude")
+            if latitude == 0.0 and longitude == 0.0:
+                continue
+
+            # Parse time, ensuring it is in the correct format
+            time_field = entry.get("Time")
+            if isinstance(time_field, datetime):
+                current_time = time_field
+            else:
+                current_time = datetime.strptime(time_field, "%a, %d %b %Y %H:%M:%S GMT")
+
+            # Set the first valid entry as the reference point
+            if ref_point is None:
+                ref_point = (latitude, longitude)
+                ref_time = current_time
+                # Start cumulative distance at zero for the reference point
+                distance_time_data.append({
+                    "time": ref_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "distance": total_distance
+                })
+                continue
+
+            # Calculate the distance from the reference point
+            current_point = (latitude, longitude)
+            distance = geodesic(ref_point, current_point).meters
+            total_distance += distance  # Update cumulative distance
+
+            # Append time and cumulative distance for this entry
+            distance_time_data.append({
+                "time": current_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "distance": total_distance
+            })
+
+            # Update reference point for the next calculation
+            ref_point = current_point
+            ref_time = current_time
+
+        return jsonify({"status": "success", "data": distance_time_data}), 200
+
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
