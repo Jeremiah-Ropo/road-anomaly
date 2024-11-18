@@ -8,6 +8,7 @@ from app.src import mongo
 from app.src.models import create_user
 from geopy.distance import geodesic
 from datetime import datetime
+from app.src.state_coordinate import nigeria_states
 
 
 main = Blueprint('main', __name__)
@@ -393,3 +394,15 @@ def get_distance_time_data():
 
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+    
+@main.route('/api/states/<query>', methods=['GET'])
+def get_state_coordinates(query):
+    # Find the state in the JSON object
+    state = next((state for state in nigeria_states['states'] 
+                  if state["name"].lower() == query.lower() or state["capital"].lower() == query.lower()), None)
+    
+    # Check if state exists
+    if state:
+        return jsonify(state), 200
+    else:
+        return jsonify({'error': 'State not found'}), 404
